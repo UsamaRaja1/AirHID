@@ -1,0 +1,18 @@
+AirHID
+Copyright (c) 2026
+
+This product includes software derived from:
+
+  HijelHID_BLEMouse
+  Copyright (c) 2026 Hijel
+  https://github.com/HijelHub/HijelHID_BLEMouse
+  Licensed under the Apache License, Version 2.0
+
+  HijelHID_BLEKeyboard
+  Copyright (c) 2026 Hijel
+  https://github.com/HijelHub/HijelHID_BLEKeyboard
+  Licensed under the Apache License, Version 2.0
+
+Portions of the BLE lifecycle, security configuration, bond management, idle
+power management, Windows HID resume handling, HID report descriptors, and
+keycode tables in AirHID are derived from those two libraries.

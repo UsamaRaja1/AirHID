@@ -1,0 +1,80 @@
+#######################################
+# Syntax Coloring Map for AirHID
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+AirHID	KEYWORD1
+AirHIDReport	KEYWORD1
+HIDLogLevel	KEYWORD1
+HIDSecurity	KEYWORD1
+HIDRate	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+addReport	KEYWORD2
+reportCount	KEYWORD2
+claimReportId	KEYWORD2
+registerInput	KEYWORD2
+registerOutput	KEYWORD2
+
+begin	KEYWORD2
+end	KEYWORD2
+kill	KEYWORD2
+beforeSleep	KEYWORD2
+afterWake	KEYWORD2
+
+setLogLevel	KEYWORD2
+setSecurityMode	KEYWORD2
+setPasskeyCallback	KEYWORD2
+onPairingComplete	KEYWORD2
+setRandomAddress	KEYWORD2
+setAppearance	KEYWORD2
+setPnp	KEYWORD2
+setUpdateRate	KEYWORD2
+setTxPower	KEYWORD2
+setBatteryLevel	KEYWORD2
+
+isConnected	KEYWORD2
+isPaired	KEYWORD2
+isBonded	KEYWORD2
+clearBonds	KEYWORD2
+getIdleTime	KEYWORD2
+reportIntervalMs	KEYWORD2
+
+notify	KEYWORD2
+markInput	KEYWORD2
+
+buildDescriptor	KEYWORD2
+onAttach	KEYWORD2
+onConnect	KEYWORD2
+onDisconnect	KEYWORD2
+onOutput	KEYWORD2
+onTick	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+Off	LITERAL1
+Normal	LITERAL1
+Verbose	LITERAL1
+JustWorks	LITERAL1
+Passkey	LITERAL1
+Hz25	LITERAL1
+Hz50	LITERAL1
+Hz100	LITERAL1
+Hz125	LITERAL1
+
+AIRHID_MAX_REPORTS	LITERAL1
+AIRHID_MAX_CHANNELS	LITERAL1
+AIRHID_REPORT_MAP_SIZE	LITERAL1
+AIRHID_MAX_REPORT_LEN	LITERAL1
+AIRHID_APPEARANCE_GENERIC	LITERAL1
+AIRHID_APPEARANCE_KEYBOARD	LITERAL1
+AIRHID_APPEARANCE_MOUSE	LITERAL1
+AIRHID_APPEARANCE_GAMEPAD	LITERAL1
