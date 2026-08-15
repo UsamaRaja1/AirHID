@@ -30,6 +30,93 @@ own report type.
 
 ---
 
+## What it can do
+
+Three report types over one pairing. The host sees a keyboard, a mouse, and a
+media controller at the same time.
+
+### Keyboard — `AirKeyboard`
+
+144 keycodes: everything on a full 104/105-key board.
+
+| Group | Coverage |
+|---|---|
+| Typing | A–Z, 0–9, all punctuation, Space, Enter, Tab, Backspace, Esc |
+| Function | F1–**F24** |
+| Navigation | Arrows, Home, End, Page Up/Down, Insert, Delete |
+| Locks & system | Caps Lock, Num Lock, Scroll Lock, Print Screen, Pause, Power, Application (menu) |
+| Numpad | 0–9, `.` `,` `/` `*` `-` `+` `=`, Enter |
+| Modifiers | Left **and** right Ctrl, Shift, Alt, GUI (Win/Cmd) |
+| International | Non-US backslash, INTL1–6, LANG1–5 (JIS, Hangul, …) |
+
+**Any keyboard shortcut works.** Modifiers can be held as keys or passed as a
+bitmask, so `Ctrl+C`, `Alt+Tab`, `Win+D`, `Cmd+Space`, and `Ctrl+Shift+Esc` are
+all one call:
+
+```cpp
+keyboard.tap(KEY_C, KEY_MOD_LCTRL);                    // Ctrl+C
+keyboard.tap(KEY_ESCAPE, KEY_MOD_LCTRL | KEY_MOD_LSHIFT);  // Ctrl+Shift+Esc
+
+keyboard.press(KEY_LALT);                              // hold Alt across taps
+keyboard.tap(KEY_TAB);
+keyboard.tap(KEY_TAB);
+keyboard.release(KEY_LALT);
+```
+
+Six non-modifier keys at once (6KRO). `print()` / `println()` type ASCII
+strings directly. Host LED state (Caps/Num/Scroll) arrives via `onLEDChange()`.
+
+### Mouse — `AirMouse`
+
+Five buttons (left, right, middle, **back**, **forward**), relative movement,
+scroll wheel. `moveTo()` spreads movement smoothly over a duration;
+`click()`, `doubleClick()`, and `press()`/`release()` for dragging.
+
+Horizontal scroll (AC Pan) is implemented but **off by default** — call
+`mouse.setHorizontalScroll(true)` before `begin()`.
+
+### Media and consumer keys — `AirConsumer`
+
+41 named usages, plus any raw Consumer Page usage up to `0x3FF`.
+
+| Group | Keys |
+|---|---|
+| Transport | play, pause, play/pause, stop, next, previous, fast-forward, rewind, record, eject, shuffle |
+| Volume | up, down, mute, bass boost, bass ±, treble ± |
+| Display | brightness up/down, backlight toggle |
+| Keyboard backlight | up, down, toggle |
+| Launch | media player, mail, calculator, file explorer, screensaver, task manager |
+| Browser | search, home, back, forward, stop, refresh, bookmarks |
+| Power | sleep, lock screen |
+
+### From the core
+
+Bonding that survives power cycles, Just Works or passkey pairing, battery
+level reporting, TX power control (−12 to +9 dBm), automatic idle power saving,
+and deep-sleep hooks.
+
+### Host support caveats
+
+- **Brightness and backlight keys are the least reliable.** Host support for
+  consumer-page brightness over BLE HID varies widely — macOS commonly ignores
+  it, Windows and Linux are inconsistent. Volume and transport work
+  essentially everywhere.
+- **`MEDIA_LOCK_SCREEN` is not a real lock.** The Consumer Page has no
+  dedicated lock usage, so it sends AL Screen Saver and the behaviour is
+  OS-dependent. For a genuine lock, `Win+L` from the keyboard is more reliable.
+- **ASCII typing assumes a US layout** on the host. `print("@")` sends Shift+2,
+  which produces `"` on a UK layout. Use explicit keycodes for other layouts.
+- **One media key at a time** — a Consumer Page array-field limitation, not
+  an AirHID one.
+
+### Not built yet
+
+System Control (real power off / sleep / wake) exists only as the hand-written
+example in `examples/MinimalReport`, not as a library class. Gamepad, absolute
+or touchpad pointing, and multi-host switching are unbuilt.
+
+---
+
 ## How it works
 
 `AirHID` owns the BLE stack, the GATT server, the HID service, the Device
@@ -102,16 +189,16 @@ changes the descriptor, which invalidates every existing pairing.
 
 ### Report types
 
-| Class | Header | Covers |
+| Class | Header | Constants |
 |---|---|---|
-| `AirKeyboard` | `<AirKeyboard.h>` | 104/105 keys, 6KRO, modifiers, host LEDs, `print()` |
-| `AirMouse` | `<AirMouse.h>` | 3/5 buttons, relative X/Y, wheel, optional AC Pan |
-| `AirConsumer` | `<AirConsumer.h>` | media transport, volume, brightness, browser, app launch |
+| `AirKeyboard` | `<AirKeyboard.h>` | `KEY_*`, `KEY_MOD_*` in `AirHIDKeys.h` |
+| `AirMouse` | `<AirMouse.h>` | `MouseButton::` enum |
+| `AirConsumer` | `<AirConsumer.h>` | `MEDIA_*` in `AirHIDMediaKeys.h` |
+
+See [What it can do](#what-it-can-do) for the full key coverage.
 
 `AirConsumer` holds one usage at a time — that is what the Consumer Page array
 field allows. `press()` replaces whatever was held; `release()` sends `0x0000`.
-Any Consumer Page usage up to `0x3FF` works, not just the `MEDIA_*` constants
-in `AirHIDMediaKeys.h`.
 
 ### Threading, per class
 
