@@ -1,0 +1,21 @@
+# JetBrains (PyCharm/CLion) — also keeps the Arduino IDE from warning about
+# "spurious folders" in the library and from bundling them into exported ZIPs.
+.idea/
+.jbeval/
+*.iml
+
+# Claude Code
+.claude/
+
+# Library ZIPs built for Arduino IDE "Add .ZIP Library"
+*.zip
+
+# Arduino build output, if you ever export a compiled binary into the sketch dir
+build/
+*.elf
+*.bin
+*.map
+
+# OS cruft
+.DS_Store
+Thumbs.db

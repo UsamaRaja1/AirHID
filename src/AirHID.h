@@ -590,3 +590,15 @@ private:
     Channel* _findChannel(uint8_t reportId, bool output);
     Channel* _findChannelByChr(NimBLECharacteristic* chr);
 };
+
+// ---------------------------------------------------------------------------
+// Report types live in their own headers — include the ones you need:
+//
+//   #include <AirHID.h>
+//   #include <AirMouse.h>
+//   #include <AirKeyboard.h>
+//
+// This header deliberately does not pull them in. The core knows nothing about
+// any particular report type, and a sketch that only wants a mouse should not
+// compile a keyboard.
+// ---------------------------------------------------------------------------

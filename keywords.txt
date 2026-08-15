@@ -8,6 +8,10 @@
 
 AirHID	KEYWORD1
 AirHIDReport	KEYWORD1
+AirKeyboard	KEYWORD1
+AirMouse	KEYWORD1
+AirConsumer	KEYWORD1
+MouseButton	KEYWORD1
 HIDLogLevel	KEYWORD1
 HIDSecurity	KEYWORD1
 HIDRate	KEYWORD1
@@ -55,6 +59,33 @@ onConnect	KEYWORD2
 onDisconnect	KEYWORD2
 onOutput	KEYWORD2
 onTick	KEYWORD2
+reportId	KEYWORD2
+
+press	KEYWORD2
+release	KEYWORD2
+releaseAll	KEYWORD2
+tap	KEYWORD2
+setTapDelay	KEYWORD2
+setKeyGap	KEYWORD2
+isNumLockOn	KEYWORD2
+isCapsLockOn	KEYWORD2
+isScrollLockOn	KEYWORD2
+ledState	KEYWORD2
+onLEDChange	KEYWORD2
+activeUsage	KEYWORD2
+
+move	KEYWORD2
+moveTo	KEYWORD2
+addScroll	KEYWORD2
+addScrollH	KEYWORD2
+scroll	KEYWORD2
+scrollH	KEYWORD2
+setButton	KEYWORD2
+setButtons	KEYWORD2
+click	KEYWORD2
+doubleClick	KEYWORD2
+setButtonCount	KEYWORD2
+setHorizontalScroll	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

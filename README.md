@@ -19,13 +19,14 @@ NimBLE APIs are not used.
 | Phase | Scope | State |
 |---|---|---|
 | **1** | Library skeleton, `AirHID` core, generic report registry | **complete** |
-| 2 | Mouse report | planned |
-| 3 | Keyboard report (+ LED output) | planned |
-| 4 | Consumer control, system control, gamepad | planned |
+| **2** | `AirKeyboard` (+ LED output), `AirMouse`, composite reports | **complete** |
+| **3** | `AirConsumer` — media, volume, brightness, browser keys | **complete** |
+| 4 | System control, gamepad | planned |
 
-Phase 1 ships the core and the extension point. There are no built-in report
-types yet — `examples/MinimalReport` defines one in the sketch to exercise the
-whole path end to end.
+Media keys are in `AirConsumer`, not `AirKeyboard` — they are a separate HID
+collection, so they get their own report type. `examples/MinimalReport` writes
+a System Control report by hand and doubles as the reference for building your
+own report type.
 
 ---
 
@@ -57,23 +58,69 @@ AirHID (core)
 
 ## Usage
 
+Include the core plus whatever report types you need. `AirHID.h` deliberately
+does not pull them in — a sketch that only wants a mouse should not compile a
+keyboard.
+
 ```cpp
 #include <AirHID.h>
+#include <AirKeyboard.h>
+#include <AirMouse.h>
+#include <AirConsumer.h>
 
-AirHID hid("Air HID", "Acme");
+AirHID      hid("Air HID", "Acme");
+AirKeyboard keyboard;
+AirMouse    mouse;              // 5 buttons, no horizontal scroll
+AirConsumer consumer;
 
 void setup() {
     hid.setLogLevel(HIDLogLevel::Normal);
 
-    hid.addReport(keyboard);   // claims report ID 1
-    hid.addReport(mouse);      // claims report ID 2
+    hid.addReport(keyboard);    // claims report ID 1
+    hid.addReport(mouse);       // claims report ID 2
+    hid.addReport(consumer);    // claims report ID 3
 
     hid.begin();
 }
+
+void loop() {
+    if (!hid.isPaired()) return;
+
+    keyboard.println("Hello");
+    keyboard.tap(KEY_TAB);
+
+    mouse.moveTo(120, 0, 300);
+    mouse.click(MouseButton::Left);
+
+    consumer.tap(MEDIA_VOLUME_UP);
+}
 ```
 
-Registration order determines report ID assignment. Keep it stable — changing
-the order changes the descriptor, which invalidates every existing pairing.
+Registration order determines report ID assignment. Register new report types
+at the **end** so existing IDs do not shift. Any change to the set or order
+changes the descriptor, which invalidates every existing pairing.
+
+### Report types
+
+| Class | Header | Covers |
+|---|---|---|
+| `AirKeyboard` | `<AirKeyboard.h>` | 104/105 keys, 6KRO, modifiers, host LEDs, `print()` |
+| `AirMouse` | `<AirMouse.h>` | 3/5 buttons, relative X/Y, wheel, optional AC Pan |
+| `AirConsumer` | `<AirConsumer.h>` | media transport, volume, brightness, browser, app launch |
+
+`AirConsumer` holds one usage at a time — that is what the Consumer Page array
+field allows. `press()` replaces whatever was held; `release()` sends `0x0000`.
+Any Consumer Page usage up to `0x3FF` works, not just the `MEDIA_*` constants
+in `AirHIDMediaKeys.h`.
+
+### Threading, per class
+
+`AirMouse`'s base layer (`move`, `addScroll`, `setButton`, `setButtons`) is
+ISR-safe. Its macro layer (`moveTo`, `click`, `doubleClick`, `scroll`) blocks
+and is loop-task only.
+
+`AirKeyboard` and `AirConsumer` are **entirely** loop-task only — every method
+blocks and calls into BLE. Do not call them from an interrupt.
 
 ## Writing a report
 

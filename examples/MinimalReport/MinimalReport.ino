@@ -1,67 +1,74 @@
 /**
- * MinimalReport.ino — AirHID Phase 1 smoke test
+ * MinimalReport.ino — writing your own AirHIDReport
  *
- * AirHID's core owns the BLE stack but knows nothing about mice or keyboards.
- * Everything a host sees comes from an AirHIDReport subclass registered before
- * begin(). This sketch defines the smallest useful one — a Consumer Control
- * report that sends Volume Up — to prove the whole core path works:
+ * AirHID ships keyboard, mouse, and consumer reports, but the core has no
+ * built-in knowledge of any of them: every report type is just an
+ * AirHIDReport registered before begin(). This sketch writes one by hand — a
+ * System Control report (power down / sleep / wake up) — to show the whole
+ * contract in one file:
  *
- *   descriptor assembly -> report ID claim -> characteristic creation ->
- *   advertising -> pairing -> notify
+ *   onAttach()        claim a report ID and register a channel
+ *   buildDescriptor() emit this report's slice of the composite map
+ *   notify()          send a payload through the core
  *
- * It lives in the sketch on purpose. Mouse, keyboard, and consumer classes
- * arrive in later phases as proper library types; this stays as the reference
- * for writing your own report.
+ * Only Wake Up is wired to the button. Power Down and Sleep are declared in
+ * the descriptor and left unsent on purpose — this is an example, and it
+ * should not be able to suspend your machine by accident.
  *
- * Pair with "AirHID Core" from your host's Bluetooth settings, then press the
- * BOOT button (GPIO 0) to raise the volume.
+ * Pair with "AirHID Custom", then press BOOT (GPIO 0) to send a wake request.
  */
 
 #include <AirHID.h>
 
-// ---------------------------------------------------------------------------
-// A minimal report: Consumer Control, one 16-bit usage ID per report.
-// ---------------------------------------------------------------------------
-class ConsumerReport : public AirHIDReport {
-public:
-    const char* reportName() const override { return "consumer"; }
+// System Control bits, matching the descriptor below.
+#define SYSCTL_POWER_DOWN 0x01
+#define SYSCTL_SLEEP      0x02
+#define SYSCTL_WAKE_UP    0x04
 
-    /** Send a Consumer Page usage. 0x0000 releases. */
-    void send(uint16_t usageId) {
+// ---------------------------------------------------------------------------
+// A hand-written report: System Control, one byte of bit flags.
+// ---------------------------------------------------------------------------
+class SystemControlReport : public AirHIDReport {
+public:
+    const char* reportName() const override { return "system-control"; }
+
+    /** Set the active bits. 0x00 releases. */
+    void send(uint8_t bits) {
         if (_core == nullptr) return;
-        uint8_t payload[2] = { (uint8_t)(usageId & 0xFF), (uint8_t)(usageId >> 8) };
         _core->markInput();
-        _core->notify(_reportId, payload, sizeof(payload));
+        _core->notify(_reportId, &bits, 1);
     }
 
-    /** Press then release, so the host sees a discrete key event. */
-    void tap(uint16_t usageId, uint16_t holdMs = 25) {
-        send(usageId);
+    /** Pulse one bit, so the host sees a discrete press and release. */
+    void tap(uint8_t bits, uint16_t holdMs = 25) {
+        send(bits);
         delay(holdMs);
-        send(0x0000);
+        send(0x00);
     }
 
 protected:
-    // The core calls this first, before the report map is assembled.
+    // Called first, before the report map is assembled.
     void onAttach() override {
         _reportId = _core->claimReportId();
         _core->registerInput(_reportId, this);
     }
 
-    // Emit this report's slice of the composite descriptor.
     uint16_t buildDescriptor(uint8_t* out, uint16_t maxLen) override {
         const uint8_t desc[] = {
-            0x05, 0x0C,        // Usage Page (Consumer)
-            0x09, 0x01,        // Usage (Consumer Control)
+            0x05, 0x01,        // Usage Page (Generic Desktop)
+            0x09, 0x80,        // Usage (System Control)
             0xA1, 0x01,        // Collection (Application)
             0x85, _reportId,   //   Report ID (claimed in onAttach)
             0x15, 0x00,        //   Logical Minimum (0)
-            0x26, 0xFF, 0x03,  //   Logical Maximum (0x3FF)
-            0x19, 0x00,        //   Usage Minimum (0)
-            0x2A, 0xFF, 0x03,  //   Usage Maximum (0x3FF)
-            0x75, 0x10,        //   Report Size (16 bits)
-            0x95, 0x01,        //   Report Count (1)
-            0x81, 0x00,        //   Input (Data, Array, Absolute)
+            0x25, 0x01,        //   Logical Maximum (1)
+            0x75, 0x01,        //   Report Size (1 bit)
+            0x95, 0x03,        //   Report Count (3)
+            0x09, 0x81,        //   Usage (System Power Down)  -> bit 0
+            0x09, 0x82,        //   Usage (System Sleep)       -> bit 1
+            0x09, 0x83,        //   Usage (System Wake Up)     -> bit 2
+            0x81, 0x02,        //   Input (Data, Var, Abs)
+            0x95, 0x05,        //   Report Count (5)
+            0x81, 0x01,        //   Input (Const) — pad to a whole byte
             0xC0,              // End Collection
         };
         if (sizeof(desc) > maxLen) return 0;
@@ -69,7 +76,7 @@ protected:
         return sizeof(desc);
     }
 
-    // Connection gone — nothing held, so nothing to clear.
+    // Connection gone — nothing is held, so nothing to clear.
     void onDisconnect() override {}
 
 private:
@@ -78,31 +85,27 @@ private:
 
 // ---------------------------------------------------------------------------
 
-AirHID         hid("AirHID Core", "AirHID");
-ConsumerReport consumer;
+AirHID              hid("AirHID Custom", "AirHID");
+SystemControlReport sysCtl;
 
 const int BUTTON_PIN = 0;   // BOOT button on most ESP32 dev boards
-
-#define MEDIA_VOLUME_UP 0x00E9
 
 void setup() {
     Serial.begin(115200);
     delay(500);
-    Serial.println("AirHID — Phase 1 core smoke test");
+    Serial.println("AirHID — custom report example");
 
     pinMode(BUTTON_PIN, INPUT_PULLUP);
 
     hid.setLogLevel(HIDLogLevel::Normal);
-
-    // Registration order fixes report ID assignment: this one gets ID 1.
-    hid.addReport(consumer);
+    hid.addReport(sysCtl);      // claims report ID 1
 
     if (!hid.begin()) {
         Serial.println("begin() failed — halted");
         while (true) delay(1000);
     }
 
-    Serial.println("Advertising. Pair, then press BOOT for volume up.");
+    Serial.println("Advertising. Pair, then press BOOT to send Wake Up.");
 }
 
 void loop() {
@@ -119,8 +122,8 @@ void loop() {
     if (digitalRead(BUTTON_PIN) == LOW) {
         delay(50);                                  // debounce
         if (digitalRead(BUTTON_PIN) == LOW) {
-            Serial.println("Volume up");
-            consumer.tap(MEDIA_VOLUME_UP);
+            Serial.println("System Wake Up");
+            sysCtl.tap(SYSCTL_WAKE_UP);
             while (digitalRead(BUTTON_PIN) == LOW) delay(10);
         }
     }
